@@ -374,13 +374,7 @@ Special thanks to:
 - Venice AI for uncensored verification
 
 ---
-
-## 📬 Contact
-
-- **Website:** https://trustr.gg
-- **Twitter:** @trustrprotocol
-- **Discord:** [Join Discord](https://discord.gg/trustr)
-- **Email:** hello@trustr.gg
+Website: https://trustr-protocol.vercel.app
 
 ---
 

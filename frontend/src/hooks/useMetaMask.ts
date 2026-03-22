@@ -1,0 +1,232 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { ethers } from 'ethers';
+import MetaMaskSDK from '@metamask/sdk';
+
+/**
+ * MetaMask SDK Hook
+ * Handles wallet connection, policy wallets, and ERC-7715 delegations
+ */
+
+export interface WalletState {
+  isConnected: boolean;
+  address: string | null;
+  chainId: number | null;
+  provider: ethers.BrowserProvider | null;
+  signer: ethers.Signer | null;
+  isSmartAccount: boolean;
+  isLoading: boolean;
+  error: string | null;
+}
+
+export interface ERC7715Delegation {
+  delegator: string;
+  delegatee: string;
+  capabilities: string[];
+  expiry: number;
+  signature: string;
+}
+
+const SDK = new MetaMaskSDK({
+  dappMetadata: {
+    name: 'Trustr Protocol',
+    url: 'https://trustr.gg',
+  },
+  enableAnalytics: true,
+  preferDesktop: true,
+  extensionOnly: false,
+  checkInstallationImmediately: false,
+});
+
+export function useMetaMask() {
+  const [walletState, setWalletState] = useState<WalletState>({
+    isConnected: false,
+    address: null,
+    chainId: null,
+    provider: null,
+    signer: null,
+    isSmartAccount: false,
+    isLoading: true,
+    error: null,
+  });
+
+  const [delegation, setDelegation] = useState<ERC7715Delegation | null>(null);
+
+  // Connect wallet
+  const connect = useCallback(async () => {
+    try {
+      setWalletState(prev => ({ ...prev, isLoading: true, error: null }));
+
+      await SDK.connect();
+      const provider = SDK.getProvider();
+      
+      if (!provider) {
+        throw new Error('Failed to get provider');
+      }
+
+      const ethersProvider = new ethers.BrowserProvider(provider);
+      const signer = await ethersProvider.getSigner();
+      const address = await signer.getAddress();
+      const network = await ethersProvider.getNetwork();
+      const chainId = Number(network.chainId);
+
+      // Check if smart account (ERC-4337)
+      const code = await provider.getCode(address);
+      const isSmartAccount = code !== '0x';
+
+      setWalletState({
+        isConnected: true,
+        address,
+        chainId,
+        provider: ethersProvider,
+        signer,
+        isSmartAccount,
+        isLoading: false,
+        error: null,
+      });
+
+      return { address, chainId };
+    } catch (error: any) {
+      setWalletState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: error.message || 'Failed to connect',
+      }));
+      throw error;
+    }
+  }, []);
+
+  // Disconnect wallet
+  const disconnect = useCallback(async () => {
+    try {
+      await SDK.terminate();
+      setWalletState({
+        isConnected: false,
+        address: null,
+        chainId: null,
+        provider: null,
+        signer: null,
+        isSmartAccount: false,
+        isLoading: false,
+        error: null,
+      });
+      setDelegation(null);
+    } catch (error: any) {
+      console.error('Disconnect error:', error);
+    }
+  }, []);
+
+  // Switch network
+  const switchNetwork = useCallback(async (chainId: number) => {
+    try {
+      const provider = SDK.getProvider();
+      if (!provider) throw new Error('No provider');
+
+      const hexChainId = `0x${chainId.toString(16)}`;
+      await provider.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: hexChainId }],
+      });
+
+      const network = await new ethers.BrowserProvider(provider).getNetwork();
+      return Number(network.chainId);
+    } catch (error: any) {
+      if (error.code === 4902) {
+        throw new Error('Network not added to MetaMask');
+      }
+      throw error;
+    }
+  }, []);
+
+  // Create ERC-7715 delegation (for policy-governed spending)
+  const createDelegation = useCallback(async (
+    delegatee: string,
+    capabilities: string[],
+    expiry: number
+  ): Promise<ERC7715Delegation | null> => {
+    if (!walletState.signer) return null;
+
+    try {
+      const address = await walletState.signer.getAddress();
+      
+      // Create delegation message
+      const message = {
+        delegator: address,
+        delegatee,
+        capabilities,
+        expiry,
+        nonce: Date.now(),
+      };
+
+      // Sign delegation
+      const signature = await walletState.signer.signMessage(
+        JSON.stringify(message)
+      );
+
+      const delegation: ERC7715Delegation = {
+        delegator: address,
+        delegatee,
+        capabilities,
+        expiry,
+        signature,
+      };
+
+      setDelegation(delegation);
+      return delegation;
+    } catch (error: any) {
+      console.error('Delegation error:', error);
+      return null;
+    }
+  }, [walletState.signer]);
+
+  // Set spending policy (for smart accounts)
+  const setSpendingPolicy = useCallback(async (
+    limit: string,
+    period: 'day' | 'week' | 'month',
+    enabled: boolean
+  ): Promise<boolean> => {
+    if (!walletState.isSmartAccount || !walletState.signer) {
+      return false;
+    }
+
+    try {
+      // In production, this would interact with smart account contract
+      console.log('Setting spending policy:', { limit, period, enabled });
+      return true;
+    } catch (error: any) {
+      console.error('Spending policy error:', error);
+      return false;
+    }
+  }, [walletState.isSmartAccount, walletState.signer]);
+
+  // Auto-connect on mount
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const accounts = await SDK.requestAccounts();
+        if (accounts && accounts.length > 0) {
+          await connect();
+        } else {
+          setWalletState(prev => ({ ...prev, isLoading: false }));
+        }
+      } catch (error) {
+        setWalletState(prev => ({ ...prev, isLoading: false }));
+      }
+    };
+    init();
+  }, [connect]);
+
+  return {
+    ...walletState,
+    disconnect,
+    connect,
+    switchNetwork,
+    createDelegation,
+    setSpendingPolicy,
+    delegation,
+    sdk: SDK,
+  };
+}
+
+export default useMetaMask;

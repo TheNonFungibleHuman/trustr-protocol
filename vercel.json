@@ -1,9 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "buildCommand": "npm run build",
-  "devCommand": "npm run dev",
-  "installCommand": "npm install",
+  "buildCommand": "cd frontend && npm run build",
+  "devCommand": "cd frontend && npm run dev",
+  "installCommand": "cd frontend && npm install --legacy-peer-deps && npm install encoding --legacy-peer-deps",
+  "outputDirectory": "frontend/.next",
   "env": {
     "NEXT_PUBLIC_BASE_RPC_URL": "https://mainnet.base.org",
     "NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL": "https://sepolia.base.org"

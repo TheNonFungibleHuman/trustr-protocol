@@ -9,6 +9,12 @@ import { locusClient } from '../lib/locus';
 import { veniceClient } from '../lib/venice';
 import { uniswapClient } from '../lib/uniswap';
 import { Wallet, Briefcase, Bot, Shield, CheckCircle, Clock, Users, ArrowRight, Sparkles, Zap, Lock, Globe, ArrowUpRight } from 'lucide-react';
+import DemoLanding from '@/components/DemoLanding';
+import DemoBanner from '@/components/DemoBanner';
+import DemoJobsList from '@/components/DemoJobsList';
+import DemoJobCreation from '@/components/DemoJobCreation';
+import DemoAgentRegistration from '@/components/DemoAgentRegistration';
+import { demoMode, type DemoJob } from '@/lib/demo';
 
 interface Job {
   jobId: number;
@@ -52,6 +58,12 @@ export default function Home() {
   const [userJobs, setUserJobs] = useState<Job[]>([]);
   const [isLoadingJobs, setIsLoadingJobs] = useState(false);
 
+  // Demo mode state
+  const [isDemoMode, setIsDemoMode] = useState(false);
+  const [showDemoLanding, setShowDemoLanding] = useState(false);
+  const [demoView, setDemoView] = useState<'browse' | 'create' | 'register'>('browse');
+  const [selectedDemoJob, setSelectedDemoJob] = useState<DemoJob | null>(null);
+
   // Handle scroll for header styling
   useEffect(() => {
     const handleScroll = () => {
@@ -59,6 +71,25 @@ export default function Home() {
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Listen for demo mode changes
+  useEffect(() => {
+    const handleDemoChange = (event: CustomEvent<boolean>) => {
+      const enabled = event.detail;
+      setIsDemoMode(enabled);
+      if (enabled) {
+        setDemoView('browse');
+        setShowDemoLanding(false);
+      }
+    };
+
+    window.addEventListener('demo-mode-change', handleDemoChange as EventListener);
+    
+    // Check initial state
+    setIsDemoMode(demoMode.isActive());
+
+    return () => window.removeEventListener('demo-mode-change', handleDemoChange as EventListener);
   }, []);
 
   const showNotification = (type: 'success' | 'error', message: string) => {
@@ -80,7 +111,6 @@ export default function Home() {
       const allJobs: Job[] = [];
       const loadedJobs: Job[] = [];
 
-      // Check jobs 1 through 100
       for (let jobId = 1; jobId <= 100; jobId++) {
         try {
           const job = await escrowContract.getJob(jobId);
@@ -99,14 +129,12 @@ export default function Home() {
             };
             loadedJobs.push(jobData);
             
-            // Check if this job belongs to the current user
             if (job.client.toLowerCase() === address.toLowerCase() || 
                 job.provider.toLowerCase() === address.toLowerCase()) {
               allJobs.push(jobData);
             }
           }
         } catch (error) {
-          // Job doesn't exist or error fetching, continue to next
           continue;
         }
       }
@@ -120,7 +148,6 @@ export default function Home() {
     }
   };
 
-  // Load jobs when connected, address changes, or tab changes to browse/my-jobs
   useEffect(() => {
     if (isConnected && address && (activeTab === 'browse' || activeTab === 'my-jobs')) {
       loadJobs();
@@ -139,9 +166,10 @@ export default function Home() {
       const escrowContract = getEscrowContract(signer);
       if (!escrowContract) throw new Error('Contract not available');
 
+      const currentChain = chainId === 8453 ? 'base' : chainId === 84532 ? 'baseSepolia' : 'ethereum';
       const paymentToken = jobForm.paymentToken === 'ETH' 
-        ? config.tokens.ETH.address 
-        : config.tokens[jobForm.paymentToken as keyof typeof config.tokens].address;
+        ? config.tokens[currentChain].ETH.address 
+        : (config.tokens[currentChain] as any)[jobForm.paymentToken].address;
       
       const paymentAmount = ethers.parseUnits(jobForm.paymentAmount, jobForm.paymentToken === 'ETH' ? 18 : 6);
       const deadline = Math.floor(new Date(jobForm.deadline).getTime() / 1000);
@@ -173,7 +201,6 @@ export default function Home() {
         metadata: '',
       });
       
-      // Reload jobs after successful creation
       await loadJobs();
     } catch (error: any) {
       console.error('Create job error:', error);
@@ -216,14 +243,154 @@ export default function Home() {
     }
   };
 
+  // Demo mode handlers
+  const handleEnterDemo = () => {
+    setShowDemoLanding(true);
+  };
+
+  const handleStartDemo = () => {
+    setShowDemoLanding(false);
+    setIsDemoMode(true);
+    setDemoView('browse');
+  };
+
+  const handleExitDemo = () => {
+    demoMode.setMode(false);
+    setIsDemoMode(false);
+    setShowDemoLanding(false);
+  };
+
+  const handleDemoJobCreated = () => {
+    setDemoView('browse');
+    showNotification('success', 'Demo job created successfully!');
+  };
+
+  const handleDemoAgentRegistered = () => {
+    setDemoView('browse');
+    showNotification('success', 'Demo agent registration complete!');
+  };
+
+  // Show demo landing page
+  if (showDemoLanding) {
+    return (
+      <>
+        <DemoBanner />
+        <DemoLanding onStartDemo={handleStartDemo} onExitDemo={handleExitDemo} />
+      </>
+    );
+  }
+
+  // Show demo mode interface
+  if (isDemoMode) {
+    return (
+      <div className="min-h-screen bg-slate-900">
+        <DemoBanner />
+        
+        {/* Demo Navigation */}
+        <header className="glass-header border-b border-slate-700">
+          <div className="container-xl">
+            <div className="flex justify-between items-center py-4">
+              <div className="flex items-center space-x-3 cursor-pointer group" onClick={() => setDemoView('browse')}>
+                <div className="icon-container-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/30 group-hover:scale-110 transition-transform duration-300">
+                  <Shield className="w-8 h-8 text-purple-400" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-white">Trustr <span className="text-purple-400">Demo</span></h1>
+                  <p className="text-xs text-slate-400">Interactive Demo Mode</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-4">
+                <div className="hidden sm:flex items-center space-x-2 px-4 py-2 rounded-xl bg-slate-800/50 border border-slate-700">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                  <span className="text-sm font-medium text-slate-300">
+                    Balance: <span className="text-green-400 font-bold">{demoMode.getBalance()} ETH</span>
+                  </span>
+                </div>
+                <button 
+                  onClick={() => setDemoView('browse')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    demoView === 'browse' 
+                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' 
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Browse Jobs
+                </button>
+                <button 
+                  onClick={() => setDemoView('create')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    demoView === 'create' 
+                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' 
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Create Job
+                </button>
+                <button 
+                  onClick={() => setDemoView('register')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    demoView === 'register' 
+                      ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Register Agent
+                </button>
+                <button
+                  onClick={handleExitDemo}
+                  className="btn-secondary text-sm"
+                >
+                  Exit Demo
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Demo Content */}
+        <main className="container-xl py-8">
+          {demoView === 'browse' && (
+            <DemoJobsList 
+              onCreateJob={() => setDemoView('create')}
+              onViewJob={(job) => setSelectedDemoJob(job)}
+            />
+          )}
+          {demoView === 'create' && (
+            <DemoJobCreation 
+              onSuccess={handleDemoJobCreated}
+              onCancel={() => setDemoView('browse')}
+            />
+          )}
+          {demoView === 'register' && (
+            <DemoAgentRegistration
+              onSuccess={handleDemoAgentRegistered}
+              onCancel={() => setDemoView('browse')}
+            />
+          )}
+        </main>
+
+        {/* Demo Footer */}
+        <footer className="border-t border-slate-700 mt-20 py-8 bg-slate-800/50">
+          <div className="container-xl text-center">
+            <p className="text-slate-400 text-sm">
+              <span className="text-amber-400 font-medium">Demo Mode:</span> All transactions are simulated. No real wallets or tokens are used.
+            </p>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
+  // Original connected/non-connected UI
   return (
     <div className="min-h-screen bg-background">
-      {/* Background decoration - Premium layers */}
+      {/* Background decoration */}
       <div className="fixed inset-0 bg-grid-pattern opacity-50 pointer-events-none" />
       <div className="fixed top-0 right-0 w-96 h-96 bg-gradient-radial opacity-20 pointer-events-none" />
       <div className="fixed bottom-0 left-0 w-128 h-128 bg-radial-gradient opacity-15 pointer-events-none" />
       
-      {/* Header - Glassmorphic */}
+      {/* Header */}
       <header className={`glass-header ${isHeaderScrolled ? 'scrolled' : ''}`}>
         <div className="container-xl">
           <div className="flex justify-between items-center py-4">
@@ -251,39 +418,45 @@ export default function Home() {
                   </button>
                 </div>
               ) : (
-                <button 
-                  onClick={connect} 
-                  disabled={isWalletLoading}
-                  className="btn-primary flex items-center space-x-2"
-                >
-                  <Wallet className="w-4 h-4" />
-                  <span>{isWalletLoading ? 'Connecting...' : 'Connect Wallet'}</span>
-                </button>
+                <>
+                  <button 
+                    onClick={handleEnterDemo} 
+                    className="btn-secondary text-sm flex items-center gap-2"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    Try Demo
+                  </button>
+                  <button 
+                    onClick={connect} 
+                    disabled={isWalletLoading}
+                    className="btn-primary flex items-center space-x-2"
+                  >
+                    <Wallet className="w-4 h-4" />
+                    <span>{isWalletLoading ? 'Connecting...' : 'Connect Wallet'}</span>
+                  </button>
+                </>
               )}
             </div>
           </div>
         </div>
       </header>
 
-      {/* Hero Section - Premium spacing & typography */}
+      {/* Hero Section */}
       {!isConnected && (
         <section className="relative section-py-lg overflow-hidden">
           <div className="container-xl">
             <div className="text-center max-w-5xl mx-auto animate-fade-in">
-              {/* Pill badge - Animated */}
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-accent border border-primary/20 text-primary text-sm font-medium mb-8 animate-float group cursor-default">
                 <Sparkles className="w-4 h-4 text-accent" />
                 <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent font-semibold">Powered by Base & AI Verification</span>
                 <ArrowUpRight className="w-3.5 h-3.5 text-accent opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
               
-              {/* Main headline - Display typography */}
               <h2 className="text-display mb-6 text-gradient-glow">
                 Trustless Payments for{' '}
                 <span className="block bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">Humans & AI Agents</span>
               </h2>
               
-              {/* Subheadline - Improved hierarchy */}
               <p className="text-xl text-muted max-w-2xl mx-auto mb-10 leading-relaxed">
                 Guaranteed payment on delivery. Policy-governed escrow with{' '}
                 <span className="text-foreground font-medium">AI-powered verification</span>,{' '}
@@ -291,19 +464,21 @@ export default function Home() {
                 <span className="text-foreground font-medium">instant settlement</span>.
               </p>
               
-              {/* CTA Buttons - Enhanced */}
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-24">
                 <button onClick={connect} className="btn-primary text-base px-8 py-4 w-full sm:w-auto group">
                   <span>Get Started Now</span>
                   <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                 </button>
-                <button className="btn-secondary text-base px-8 py-4 w-full sm:w-auto">
-                  Read Documentation
+                <button 
+                  onClick={handleEnterDemo}
+                  className="btn-secondary text-base px-8 py-4 w-full sm:w-auto flex items-center justify-center gap-2"
+                >
+                  <Sparkles className="w-5 h-5" />
+                  Try Interactive Demo
                 </button>
               </div>
             </div>
             
-            {/* Feature cards - Refined grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               <div className="card-elevated p-6 animate-slide-up delay-100 group">
                 <div className="icon-container mb-4 group-hover:scale-110 transition-transform duration-300">
@@ -341,7 +516,7 @@ export default function Home() {
         </section>
       )}
 
-      {/* Notification Toast - Premium styling */}
+      {/* Notification Toast */}
       {notification && (
         <div className={`fixed top-24 right-4 sm:right-8 z-150 px-6 py-4 rounded-2xl shadow-xl animate-scale-in flex items-center gap-3 backdrop-blur-xl ${
           notification.type === 'success' 
@@ -362,7 +537,6 @@ export default function Home() {
       {/* Main Content - Connected state */}
       {isConnected && (
         <main className="container-xl py-8 animate-fade-in">
-          {/* Quick Actions - Polished card */}
           <div className="card-gradient mb-8 p-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
@@ -380,7 +554,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Tabs - Refined segment control */}
           <div className="flex items-center space-x-2 mb-8 p-1.5 rounded-2xl bg-background-secondary border border-card-border w-fit">
             <button
               onClick={() => setActiveTab('create')}
@@ -414,7 +587,6 @@ export default function Home() {
             </button>
           </div>
 
-          {/* Create Job Form - Premium layout */}
           {activeTab === 'create' && (
             <div className="card-polished max-w-4xl">
               <div className="mb-8 pb-6 border-b border-card-border">
@@ -558,7 +730,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* Browse Jobs - Display all jobs */}
           {activeTab === 'browse' && (
             <div className="card-polished">
               <div className="mb-8 pb-6 border-b border-card-border">
@@ -597,7 +768,7 @@ export default function Home() {
                       <p className="text-muted mb-4">{job.description}</p>
                       <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-4">
-                          <span className="text-muted">Payment: <span className="font-semibold text-foreground">{ethers.formatEther(job.paymentAmount)} {job.paymentToken === config.tokens.ETH.address ? 'ETH' : job.paymentToken === config.tokens.USDC.address ? 'USDC' : 'Tokens'}</span></span>
+                          <span className="text-muted">Payment: <span className="font-semibold text-foreground">{ethers.formatEther(job.paymentAmount)} {job.paymentToken === config.tokens['ethereum'].ETH.address ? 'ETH' : job.paymentToken === config.tokens['ethereum'].USDC.address ? 'USDC' : 'Tokens'}</span></span>
                           <span className="text-muted">Verification: <span className="font-semibold text-accent">{job.verificationType === 0 ? 'Manual' : job.verificationType === 1 ? 'AI' : 'Hybrid'}</span></span>
                         </div>
                         <button className="btn-secondary text-sm">Apply</button>
@@ -624,7 +795,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* My Jobs - Display user's jobs */}
           {activeTab === 'my-jobs' && (
             <div className="card-polished">
               <div className="mb-8 pb-6 border-b border-card-border">
@@ -665,7 +835,7 @@ export default function Home() {
                       <p className="text-muted mb-4">{job.description}</p>
                       <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-4">
-                          <span className="text-muted">Payment: <span className="font-semibold text-foreground">{ethers.formatEther(job.paymentAmount)} {job.paymentToken === config.tokens.ETH.address ? 'ETH' : job.paymentToken === config.tokens.USDC.address ? 'USDC' : 'Tokens'}</span></span>
+                          <span className="text-muted">Payment: <span className="font-semibold text-foreground">{ethers.formatEther(job.paymentAmount)} {job.paymentToken === config.tokens['ethereum'].ETH.address ? 'ETH' : job.paymentToken === config.tokens['ethereum'].USDC.address ? 'USDC' : 'Tokens'}</span></span>
                           <span className="text-muted">Verification: <span className="font-semibold text-accent">{job.verificationType === 0 ? 'Manual' : job.verificationType === 1 ? 'AI' : 'Hybrid'}</span></span>
                         </div>
                         <div className="flex gap-2">
@@ -701,7 +871,7 @@ export default function Home() {
         </main>
       )}
 
-      {/* Footer - Premium design */}
+      {/* Footer */}
       <footer className="border-t border-card-border mt-20 py-12 bg-background-elevated">
         <div className="container-xl">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
@@ -728,19 +898,15 @@ export default function Home() {
             </div>
             
             <div>
-              <h4 className="font-semibold mb-4 text-foreground">Integrations</h4>
+              <h4 className="font-semibold mb-4 text-foreground">Features</h4>
               <ul className="space-y-3 text-sm">
                 <li className="flex items-center gap-2 text-muted">
                   <div className="w-1.5 h-1.5 bg-success rounded-full" />
+                  Interactive Demo Mode
+                </li>
+                <li className="flex items-center gap-2 text-muted">
+                  <div className="w-1.5 h-1.5 bg-success rounded-full" />
                   MetaMask SDK
-                </li>
-                <li className="flex items-center gap-2 text-muted">
-                  <div className="w-1.5 h-1.5 bg-success rounded-full" />
-                  Locus - Data Verification
-                </li>
-                <li className="flex items-center gap-2 text-muted">
-                  <div className="w-1.5 h-1.5 bg-success rounded-full" />
-                  Uniswap - Token Swaps
                 </li>
                 <li className="flex items-center gap-2 text-muted">
                   <div className="w-1.5 h-1.5 bg-accent rounded-full shadow-glow-sm" />

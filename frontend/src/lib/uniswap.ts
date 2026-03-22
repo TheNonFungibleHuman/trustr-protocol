@@ -99,7 +99,7 @@ export class UniswapClient {
     const result = await this.executeSwap(
       {
         tokenIn,
-        tokenOut: config.tokens.USDC.address,
+        tokenOut: config.tokens.base.USDC.address,
         amountIn,
         slippageTolerance: 50, // 0.5%
         recipient: await signer.getAddress(),
@@ -123,7 +123,7 @@ export class UniswapClient {
     // Placeholder implementation
     const ETH_PRICE = 3500; // Placeholder
     
-    if (tokenAddress === config.tokens.ETH.address) {
+    if (tokenAddress === config.tokens.base.ETH.address) {
       return ETH_PRICE;
     }
     

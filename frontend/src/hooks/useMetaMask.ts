@@ -42,7 +42,6 @@ const SDK = new MetaMaskSDK({
   preferDesktop: true,
   extensionOnly: false,
   checkInstallationImmediately: false,
-  defaultChainId: BASE_SEPOLIA_HEX,
 });
 
 export function useMetaMask() {

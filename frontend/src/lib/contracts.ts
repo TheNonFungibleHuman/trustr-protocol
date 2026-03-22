@@ -88,17 +88,17 @@ function getContractAddressForChain(chainId: number, contractType: 'escrow' | 'a
 }
 
 export function getEscrowContract(signer?: ethers.Signer, chainId?: number) {
-  const address = chainId ? getContractAddressForChain(chainId, 'escrow') : config.contracts.escrow;
+  const address = chainId ? getContractAddressForChain(chainId, 'escrow') : config.contracts.base.escrow;
   return getContract(address, ESCROW_ABI, signer);
 }
 
 export function getAgentIdentityContract(signer?: ethers.Signer, chainId?: number) {
-  const address = chainId ? getContractAddressForChain(chainId, 'agentIdentity') : config.contracts.agentIdentity;
+  const address = chainId ? getContractAddressForChain(chainId, 'agentIdentity') : config.contracts.base.agentIdentity;
   return getContract(address, AGENT_IDENTITY_ABI, signer);
 }
 
 export function getAttestationRegistryContract(signer?: ethers.Signer, chainId?: number) {
-  const address = chainId ? getContractAddressForChain(chainId, 'attestationRegistry') : config.contracts.attestationRegistry;
+  const address = chainId ? getContractAddressForChain(chainId, 'attestationRegistry') : config.contracts.base.attestationRegistry;
   return getContract(address, ATTESTATION_REGISTRY_ABI, signer);
 }
 

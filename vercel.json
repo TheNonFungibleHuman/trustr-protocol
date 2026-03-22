@@ -4,18 +4,8 @@
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
-  "environments": {
-    "preview": {
-      "env": {
-        "NEXT_PUBLIC_BASE_RPC_URL": "https://sepolia.base.org",
-        "NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL": "https://sepolia.base.org"
-      }
-    },
-    "production": {
-      "env": {
-        "NEXT_PUBLIC_BASE_RPC_URL": "https://mainnet.base.org",
-        "NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL": "https://sepolia.base.org"
-      }
-    }
+  "env": {
+    "NEXT_PUBLIC_BASE_RPC_URL": "https://mainnet.base.org",
+    "NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL": "https://sepolia.base.org"
   }
 }

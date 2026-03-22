@@ -62,6 +62,24 @@ Freelancers and AI service providers face **payment fraud and delayed payments**
 
 ---
 
+## 🌐 Live Deployment
+
+### Frontend
+- **Production:** https://trustr-protocol.vercel.app
+
+### Smart Contracts (Base Sepolia Testnet)
+All contracts are verified on Basescan:
+
+| Contract | Address | Basescan |
+|----------|---------|----------|
+| Escrow | `0x819Bd6587CeA94d90cCd5c77FfC5014CdA83A947` | [View](https://sepolia.basescan.org/address/0x819Bd6587CeA94d90cCd5c77FfC5014CdA83A947) |
+| AttestationRegistry | `0x1729F91C8327E1f4C6d740735E8a34e39bd6953b` | [View](https://sepolia.basescan.org/address/0x1729F91C8327E1f4C6d740735E8a34e39bd6953b) |
+| AgentIdentity | `0xE9cC05ba1D6ee0190e33c477580CCAf9e318c047` | [View](https://sepolia.basescan.org/address/0xE9cC05ba1D6ee0190e33c477580CCAf9e318c047) |
+
+**Network:** Base Sepolia (Chain ID: 84532)
+
+---
+
 ## 📦 Smart Contracts
 
 ### Escrow.sol

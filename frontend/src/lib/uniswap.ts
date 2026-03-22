@@ -102,7 +102,7 @@ export class UniswapClient {
         tokenOut: config.tokens.USDC.address,
         amountIn,
         slippageTolerance: 50, // 0.5%
-        recipient: signer.getAddress(),
+        recipient: await signer.getAddress(),
       },
       signer
     );

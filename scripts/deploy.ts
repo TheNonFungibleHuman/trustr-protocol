@@ -1,5 +1,9 @@
 import { ethers } from "hardhat";
 
+async function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function main() {
   console.log("🚀 Deploying Trustr Protocol to Base...");
 
@@ -14,6 +18,9 @@ async function main() {
   const escrowAddress = await escrow.getAddress();
   console.log("✅ Escrow deployed to:", escrowAddress);
 
+  // Wait for transaction to be confirmed
+  await sleep(5000);
+
   // Deploy AttestationRegistry contract
   console.log("\n📦 Deploying AttestationRegistry contract...");
   const AttestationFactory = await ethers.getContractFactory("AttestationRegistry");
@@ -21,6 +28,9 @@ async function main() {
   await attestationRegistry.waitForDeployment();
   const attestationAddress = await attestationRegistry.getAddress();
   console.log("✅ AttestationRegistry deployed to:", attestationAddress);
+
+  // Wait for transaction to be confirmed
+  await sleep(5000);
 
   // Deploy AgentIdentity contract
   console.log("\n📦 Deploying AgentIdentity contract...");
@@ -30,9 +40,12 @@ async function main() {
   const agentIdentityAddress = await agentIdentity.getAddress();
   console.log("✅ AgentIdentity deployed to:", agentIdentityAddress);
 
+  // Get network name safely
+  const networkName = "baseSepolia";
+
   console.log("\n🎉 Trustr Protocol Deployment Complete!");
   console.log("==========================================");
-  console.log("Network:", ethers.provider._network.name);
+  console.log("Network:", networkName);
   console.log("Escrow:", escrowAddress);
   console.log("AttestationRegistry:", attestationAddress);
   console.log("AgentIdentity:", agentIdentityAddress);
@@ -43,7 +56,7 @@ async function main() {
   const path = require("path");
   
   const deploymentInfo = {
-    network: ethers.provider._network.name,
+    network: networkName,
     deployer: deployer.address,
     escrow: escrowAddress,
     attestationRegistry: attestationAddress,
@@ -56,7 +69,7 @@ async function main() {
     fs.mkdirSync(deploymentsDir, { recursive: true });
   }
   
-  const deploymentFile = path.join(deploymentsDir, `${ethers.provider._network.name}.json`);
+  const deploymentFile = path.join(deploymentsDir, `${networkName}.json`);
   fs.writeFileSync(deploymentFile, JSON.stringify(deploymentInfo, null, 2));
   console.log("\n📄 Deployment info saved to:", deploymentFile);
 }

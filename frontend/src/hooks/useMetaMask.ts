@@ -72,7 +72,7 @@ export function useMetaMask() {
       const chainId = Number(network.chainId);
 
       // Check if smart account (ERC-4337)
-      const code = await provider.getCode(address);
+      const code = await ethersProvider.getCode(address);
       const isSmartAccount = code !== '0x';
 
       setWalletState({
@@ -204,7 +204,7 @@ export function useMetaMask() {
   useEffect(() => {
     const init = async () => {
       try {
-        const accounts = await SDK.requestAccounts();
+        const accounts = await SDK.connect();
         if (accounts && accounts.length > 0) {
           await connect();
         } else {

@@ -7,6 +7,7 @@ import MetaMaskSDK from '@metamask/sdk';
 /**
  * MetaMask SDK Hook
  * Handles wallet connection, policy wallets, and ERC-7715 delegations
+ * Defaults to Base Sepolia testnet (chain ID 84532)
  */
 
 export interface WalletState {
@@ -28,6 +29,10 @@ export interface ERC7715Delegation {
   signature: string;
 }
 
+// Base Sepolia configuration
+const BASE_SEPOLIA_CHAIN_ID = 84532;
+const BASE_SEPOLIA_HEX = '0x14a34'; // 84532 in hex
+
 const SDK = new MetaMaskSDK({
   dappMetadata: {
     name: 'Trustr Protocol',
@@ -37,6 +42,7 @@ const SDK = new MetaMaskSDK({
   preferDesktop: true,
   extensionOnly: false,
   checkInstallationImmediately: false,
+  defaultChainId: BASE_SEPOLIA_HEX,
 });
 
 export function useMetaMask() {
@@ -52,6 +58,35 @@ export function useMetaMask() {
   });
 
   const [delegation, setDelegation] = useState<ERC7715Delegation | null>(null);
+
+  // Add Base Sepolia network to MetaMask if not present
+  const addBaseSepolia = useCallback(async () => {
+    try {
+      const provider = SDK.getProvider();
+      if (!provider) throw new Error('No provider');
+
+      await provider.request({
+        method: 'wallet_addEthereumChain',
+        params: [{
+          chainId: BASE_SEPOLIA_HEX,
+          chainName: 'Base Sepolia Testnet',
+          nativeCurrency: {
+            name: 'Sepolia Ether',
+            symbol: 'ETH',
+            decimals: 18,
+          },
+          rpcUrls: ['https://sepolia.base.org'],
+          blockExplorerUrls: ['https://sepolia.basescan.org'],
+        }],
+      });
+      return true;
+    } catch (error: any) {
+      if (error.code === 4902) {
+        throw new Error('Failed to add Base Sepolia network');
+      }
+      throw error;
+    }
+  }, []);
 
   // Connect wallet
   const connect = useCallback(async () => {
@@ -69,7 +104,24 @@ export function useMetaMask() {
       const signer = await ethersProvider.getSigner();
       const address = await signer.getAddress();
       const network = await ethersProvider.getNetwork();
-      const chainId = Number(network.chainId);
+      let chainId = Number(network.chainId);
+
+      // If not on Base Sepolia, switch to it
+      if (chainId !== BASE_SEPOLIA_CHAIN_ID) {
+        try {
+          await switchNetwork(BASE_SEPOLIA_CHAIN_ID);
+          chainId = BASE_SEPOLIA_CHAIN_ID;
+        } catch (switchError: any) {
+          // If switching fails, try adding the network first
+          if (switchError.code === 4902) {
+            await addBaseSepolia();
+            await switchNetwork(BASE_SEPOLIA_CHAIN_ID);
+            chainId = BASE_SEPOLIA_CHAIN_ID;
+          } else {
+            throw new Error('Please switch to Base Sepolia network manually');
+          }
+        }
+      }
 
       // Check if smart account (ERC-4337)
       const code = await ethersProvider.getCode(address);
@@ -95,7 +147,7 @@ export function useMetaMask() {
       }));
       throw error;
     }
-  }, []);
+  }, [addBaseSepolia]);
 
   // Disconnect wallet
   const disconnect = useCallback(async () => {

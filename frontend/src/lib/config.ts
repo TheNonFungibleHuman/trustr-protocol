@@ -28,9 +28,9 @@ export const config = {
 
   // Contract Addresses (update after deployment)
   contracts: {
-    escrow: process.env.NEXT_PUBLIC_ESCROW_ADDRESS || '0x0000000000000000000000000000000000000000',
-    attestationRegistry: process.env.NEXT_PUBLIC_ATTESTATION_ADDRESS || '0x0000000000000000000000000000000000000000',
-    agentIdentity: process.env.NEXT_PUBLIC_AGENT_IDENTITY_ADDRESS || '0x0000000000000000000000000000000000000000',
+    escrow: process.env.NEXT_PUBLIC_ESCROW_ADDRESS || '0x819Bd6587CeA94d90cCd5c77FfC5014CdA83A947',
+    attestationRegistry: process.env.NEXT_PUBLIC_ATTESTATION_ADDRESS || '0x1729F91C8327E1f4C6d740735E8a34e39bd6953b',
+    agentIdentity: process.env.NEXT_PUBLIC_AGENT_IDENTITY_ADDRESS || '0xE9cC05ba1D6ee0190e33c477580CCAf9e318c047',
   },
 
   // Partner API Configuration

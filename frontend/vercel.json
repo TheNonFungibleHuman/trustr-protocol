@@ -3,10 +3,5 @@
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
-  "installCommand": "npm install --legacy-peer-deps && npm install encoding --legacy-peer-deps",
-  "functions": {
-    "src/pages/api/**": {
-      "runtime": "nodejs22.x"
-    }
-  }
+  "installCommand": "npm install --legacy-peer-deps && npm install encoding --legacy-peer-deps"
 }

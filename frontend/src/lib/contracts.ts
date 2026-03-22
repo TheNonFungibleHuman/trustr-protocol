@@ -59,14 +59,65 @@ export function getContract(address: string, abi: any[], signer?: ethers.Signer)
   return new ethers.Contract(address, abi, provider);
 }
 
-export function getEscrowContract(signer?: ethers.Signer) {
-  return getContract(config.contracts.escrow, ESCROW_ABI, signer);
+/**
+ * Get contract address for the current chain
+ * Supports Ethereum (1), Base (8453), and Base Sepolia (84532)
+ */
+function getContractAddressForChain(chainId: number, contractType: 'escrow' | 'attestationRegistry' | 'agentIdentity'): string {
+  // Map chain ID to chain name
+  const chainName = chainId === 1 ? 'ethereum' : 
+                    chainId === 8453 ? 'base' : 
+                    chainId === 84532 ? 'baseSepolia' : null;
+  
+  if (!chainName) {
+    throw new Error(`Unsupported chain ID: ${chainId}. Supported chains: Ethereum (1), Base (8453), Base Sepolia (84532)`);
+  }
+  
+  // Get contract address from config
+  const chainContracts = config.contracts[chainName as keyof typeof config.contracts];
+  if (!chainContracts) {
+    throw new Error(`No contracts configured for chain: ${chainName}`);
+  }
+  
+  const address = (chainContracts as any)[contractType];
+  if (!address || address === '0x0000000000000000000000000000000000000000') {
+    throw new Error(`Contract ${contractType} not deployed on ${chainName}`);
+  }
+  
+  return address;
 }
 
-export function getAgentIdentityContract(signer?: ethers.Signer) {
-  return getContract(config.contracts.agentIdentity, AGENT_IDENTITY_ABI, signer);
+export function getEscrowContract(signer?: ethers.Signer, chainId?: number) {
+  const address = chainId ? getContractAddressForChain(chainId, 'escrow') : config.contracts.escrow;
+  return getContract(address, ESCROW_ABI, signer);
 }
 
-export function getAttestationRegistryContract(signer?: ethers.Signer) {
-  return getContract(config.contracts.attestationRegistry, ATTESTATION_REGISTRY_ABI, signer);
+export function getAgentIdentityContract(signer?: ethers.Signer, chainId?: number) {
+  const address = chainId ? getContractAddressForChain(chainId, 'agentIdentity') : config.contracts.agentIdentity;
+  return getContract(address, AGENT_IDENTITY_ABI, signer);
 }
+
+export function getAttestationRegistryContract(signer?: ethers.Signer, chainId?: number) {
+  const address = chainId ? getContractAddressForChain(chainId, 'attestationRegistry') : config.contracts.attestationRegistry;
+  return getContract(address, ATTESTATION_REGISTRY_ABI, signer);
+}
+
+/**
+ * Check if a chain is supported
+ */
+export function isSupportedChain(chainId: number | null): boolean {
+  if (!chainId) return false;
+  return [1, 8453, 84532].includes(chainId);
+}
+
+/**
+ * Get chain name from ID
+ */
+export function getChainName(chainId: number | null): string | null {
+  if (!chainId) return null;
+  if (chainId === 1) return 'Ethereum';
+  if (chainId === 8453) return 'Base';
+  if (chainId === 84532) return 'Base Sepolia';
+  return null;
+}
+

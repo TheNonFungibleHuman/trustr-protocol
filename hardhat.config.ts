@@ -16,6 +16,13 @@ const config: HardhatUserConfig = {
     }
   },
   networks: {
+    ethereum: {
+      url: "https://eth.llamarpc.com",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      chainId: 1,
+      gasPrice: "auto",
+      gasMultiplier: 1.2
+    },
     base: {
       url: "https://mainnet.base.org",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
@@ -31,7 +38,11 @@ const config: HardhatUserConfig = {
     }
   },
   etherscan: {
-    apiKey: process.env.BASESCAN_API_KEY || "",
+    apiKey: {
+      mainnet: process.env.ETHERSCAN_API_KEY || "",
+      base: process.env.BASESCAN_API_KEY || "",
+      baseSepolia: process.env.BASESCAN_API_KEY || ""
+    },
     customChains: [
       {
         network: "baseSepolia",

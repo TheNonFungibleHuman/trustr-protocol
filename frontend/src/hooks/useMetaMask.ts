@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ethers } from 'ethers';
 import MetaMaskSDK from '@metamask/sdk';
 
@@ -33,16 +33,29 @@ export interface ERC7715Delegation {
 const BASE_SEPOLIA_CHAIN_ID = 84532;
 const BASE_SEPOLIA_HEX = '0x14a34'; // 84532 in hex
 
-const SDK = new MetaMaskSDK({
-  dappMetadata: {
-    name: 'Trustr Protocol',
-    url: 'https://trustr.gg',
-  },
-  enableAnalytics: true,
-  preferDesktop: true,
-  extensionOnly: false,
-  checkInstallationImmediately: false,
-});
+// Lazy SDK initialization - prevents SSR issues
+let sdkInstance: MetaMaskSDK | null = null;
+
+const getSDK = (): MetaMaskSDK => {
+  if (typeof window === 'undefined') {
+    throw new Error('MetaMask SDK can only be used in browser environment');
+  }
+  
+  if (!sdkInstance) {
+    sdkInstance = new MetaMaskSDK({
+      dappMetadata: {
+        name: 'Trustr Protocol',
+        url: 'https://trustr.gg',
+      },
+      enableAnalytics: true,
+      preferDesktop: true,
+      extensionOnly: false,
+      checkInstallationImmediately: false,
+    });
+  }
+  
+  return sdkInstance;
+};
 
 export function useMetaMask() {
   const [walletState, setWalletState] = useState<WalletState>({
@@ -57,9 +70,20 @@ export function useMetaMask() {
   });
 
   const [delegation, setDelegation] = useState<ERC7715Delegation | null>(null);
+  const sdkRef = useRef<MetaMaskSDK | null>(null);
+
+  // Initialize SDK on mount (client-side only)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      sdkRef.current = getSDK();
+    }
+  }, []);
 
   // Add Base Sepolia network to MetaMask if not present
   const addBaseSepolia = useCallback(async () => {
+    const SDK = sdkRef.current;
+    if (!SDK) throw new Error('SDK not initialized');
+    
     try {
       const provider = SDK.getProvider();
       if (!provider) throw new Error('No provider');
@@ -89,6 +113,9 @@ export function useMetaMask() {
 
   // Connect wallet
   const connect = useCallback(async () => {
+    const SDK = sdkRef.current;
+    if (!SDK) throw new Error('SDK not initialized');
+    
     try {
       setWalletState(prev => ({ ...prev, isLoading: true, error: null }));
 
@@ -150,6 +177,9 @@ export function useMetaMask() {
 
   // Disconnect wallet
   const disconnect = useCallback(async () => {
+    const SDK = sdkRef.current;
+    if (!SDK) return;
+    
     try {
       await SDK.terminate();
       setWalletState({
@@ -170,6 +200,9 @@ export function useMetaMask() {
 
   // Switch network
   const switchNetwork = useCallback(async (chainId: number) => {
+    const SDK = sdkRef.current;
+    if (!SDK) throw new Error('SDK not initialized');
+    
     try {
       const provider = SDK.getProvider();
       if (!provider) throw new Error('No provider');
@@ -255,6 +288,9 @@ export function useMetaMask() {
   useEffect(() => {
     const init = async () => {
       try {
+        const SDK = sdkRef.current;
+        if (!SDK) return;
+        
         const accounts = await SDK.connect();
         if (accounts && accounts.length > 0) {
           await connect();
@@ -276,7 +312,7 @@ export function useMetaMask() {
     createDelegation,
     setSpendingPolicy,
     delegation,
-    sdk: SDK,
+    sdk: sdkRef.current,
   };
 }
 

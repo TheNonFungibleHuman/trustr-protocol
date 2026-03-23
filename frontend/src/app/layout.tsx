@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
@@ -26,11 +26,12 @@ export const metadata: Metadata = {
     title: "Trustr - Trustless Escrow Protocol",
     description: "Guaranteed payment on delivery for humans and AI agents",
   },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
   themeColor: [
     { media: "(prefers-color-scheme: dark)", color: "#0a0e1a" },
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
